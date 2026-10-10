@@ -34,8 +34,41 @@ data:
     export PYTHONUNBUFFERED=1
 
     run_audio() {
-        log "starting engine offline (audio-python -m wrapper.app)"
+        # This fork ships wrapper/ as a ConfigMap at /opt/aim (see audio-wrapper-src /
+        # audio-wrapper-caps). cwd + PYTHONPATH put it ahead of the stock /app/wrapper.
+        log "starting engine offline (audio-python -m wrapper.app, fork from /opt/aim)"
+        export PYTHONPATH="/opt/aim:/app"
+        cd /opt/aim
         exec audio-python -m wrapper.app "$@"
     }
 
     supervise_engine run_audio "$@"
+
+---
+# Forked wrapper package (package root). Files come from the chart's files/ dir.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audio-wrapper-src
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: audio-engine
+data:
+{{- range $path, $_ := .Files.Glob "files/wrapper/*.py" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+---
+# Forked wrapper package (caps/ subpackage).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audio-wrapper-caps
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: audio-engine
+data:
+{{- range $path, $_ := .Files.Glob "files/wrapper-caps/*.py" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}

@@ -1,4 +1,4 @@
-{{- /* Pyannote audio engine: one baked image serves vad / diar / speaker_embed off a single CPU load. */ -}}
+{{- /* Pyannote audio engine: stock beclab image + forked wrapper from chart ConfigMaps (/opt/aim), serving vad/diar/speaker_embed on the CPU. */ -}}
 {{- $oe := .Values.olaresEnv | default dict -}}
 {{- $modelName := $oe.MODEL_NAME | default "" -}}
 {{- $modelSource := $oe.MODEL_SOURCE | default "" -}}
@@ -11,7 +11,7 @@
 {{- end -}}
 {{- end -}}
 {{- $supportsRaw := join "," $supportsKeys -}}
-{{- $engineImage := $oe.ENGINE_IMAGE | default "ghcr.io/bayerhazard/audio-pyannote:multi-v1" -}}
+{{- $engineImage := $oe.ENGINE_IMAGE | default "docker.io/beclab/audio-pyannote:v1.1.13" -}}
 {{- $enginePort := int ($oe.ENGINE_PORT | default "8000") -}}
 {{- $cpuRequest := trim ($oe.CPU_REQUEST | default "500m") -}}
 {{- $memRequest := trim ($oe.MEMORY_REQUEST | default "1Gi") -}}
@@ -89,6 +89,15 @@ spec:
           configMap:
             name: audio-wrappers
             defaultMode: 0555
+        # Forked wrapper package, shipped with the chart (no custom image needed).
+        - name: wrapper-src
+          configMap:
+            name: audio-wrapper-src
+            defaultMode: 0444
+        - name: wrapper-caps
+          configMap:
+            name: audio-wrapper-caps
+            defaultMode: 0444
       containers:
         - name: {{ $cname }}
           image: "{{ $engineImage }}"
@@ -167,6 +176,12 @@ spec:
               readOnly: true
             - name: wrappers
               mountPath: /wrappers
+              readOnly: true
+            - name: wrapper-src
+              mountPath: /opt/aim/wrapper
+              readOnly: true
+            - name: wrapper-caps
+              mountPath: /opt/aim/wrapper/caps
               readOnly: true
           resources:
             requests:
