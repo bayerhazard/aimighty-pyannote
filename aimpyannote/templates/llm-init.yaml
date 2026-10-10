@@ -41,6 +41,15 @@ spec:
         io.kompose.service: llm-init
     spec:
       restartPolicy: Always
+      # Follow the engine pod: the wrapper handoff and the HF cache live on
+      # node-local hostPaths, so llm-init must run on the engine's node.
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                io.kompose.service: audio-engine
       volumes:
         - name: hf-cache
           hostPath:
