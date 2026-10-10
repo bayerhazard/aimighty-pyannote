@@ -1,0 +1,228 @@
+olaresManifest.version: "0.12.0"
+olaresManifest.type: app
+apiVersion: 'v3'
+metadata:
+  name: aimpyannote
+  icon: https://raw.githubusercontent.com/bayerhazard/aimighty-pyannote/main/icon.png
+  description: Pyannote community-1 diarization + Silero VAD + speaker embeddings via Olares Model Console — CPU-only, OpenAI-compatible audio analysis
+  appid: aimpyannote
+  title: AIM Pyannote Audio
+  version: '26.10.1'
+  categories:
+    - Audio
+  tags:
+  - diarization
+  - speaker-embedding
+  - voiceprint
+  - vad
+  - audio
+# Internal shared API stub: in-cluster callers use http://sharedentrances-api.<ns>:80 + /v1.
+sharedEntrances:
+  - name: aimpyannote
+    host: sharedentrances-api
+    port: 0
+    title: AIM Pyannote Audio
+    invisible: true
+    authLevel: internal
+    icon: https://raw.githubusercontent.com/bayerhazard/aimighty-pyannote/main/icon.png
+# Entrance -> llm-init (download-svc:8090): Model Console on "/", engine /v1/* reverse-proxied; authLevel internal.
+entrances:
+  - name: aimpyannote
+    port: 8090
+    host: download-svc
+    title: AIM Pyannote Audio
+    icon: https://raw.githubusercontent.com/bayerhazard/aimighty-pyannote/main/icon.png
+    openMethod: window
+    authLevel: internal
+workloadReplicas:
+  aimpyannote: 1
+  llminit: 1
+spec:
+  onlyAdmin: true
+  versionName: '26.10.1'
+  fullDescription: |
+    AIM Pyannote Audio analyses recordings on the CPU: who spoke when (diarization),
+    where speech is (voice activity detection) and a voice embedding per clip
+    (voiceprints). It is served through the Olares Model Console so the Router
+    registers it under default-diar, default-vad and default-speaker-embed.
+
+    **Models**
+    - pyannote/speaker-diarization-community-1 (CC-BY-4.0) — self-contained speaker
+      diarization pipeline (segmentation, embedding, PLDA clustering in one repo)
+    - Silero VAD V5 (MIT) — ships inside the engine image
+    - Speaker embeddings via pyannote/embedding (served from the beclab mirror)
+
+    **Inference Engine**
+    Official Olares pyannote audio engine behind beclab/llm-init, which downloads the
+    weights into the shared appCommon HF cache, publishes the model card on
+    /api/model-spec, and reverse-proxies /v1/audio/*. Runs entirely on CPU — no GPU
+    slice, no accelerator binding. Engine fork: three modules in one process
+    (vad + diar + speaker_embed).
+
+    **Key Features**
+    - OpenAI-compatible: /v1/audio/diarization, /v1/audio/vad, /v1/audio/embeddings, /v1/models
+    - Exclusive diarization (--exclusive) for consumers that need non-overlapping turns
+    - Advertised to the Router as default-diar, default-vad, default-speaker-embed
+
+    **API Example**
+    curl -X POST http://<entrance>/v1/audio/diarization -F "file=@audio.wav"
+
+    **Resource Usage**
+    CPU: 0.5-8 cores (diarization is the heavy stage), RAM: 1-8 GB, no GPU
+
+  developer: Aimighty
+  website: https://github.com/bayerhazard/aimighty-pyannote
+  sourceCode: https://github.com/bayerhazard/aimighty-pyannote
+  submitter: Aimighty
+  locale:
+    - en-US
+  doc: https://huggingface.co/pyannote/speaker-diarization-community-1
+  license:
+    - text: CC-BY-4.0 (pyannote community-1), MIT (Silero VAD)
+      url: https://huggingface.co/pyannote/speaker-diarization-community-1
+
+  # No accelerator block on purpose: this app is CPU-only (REQUIRED_GPU_MEMORY=0),
+  # so the installer asks for no accelerator mode and no device binding exists.
+  # Sum rule: envelope >= engine + llm-init (200m/256Mi req, 1/4Gi lim).
+  requiredCpu: "700m"
+  limitedCpu: "9"
+  requiredMemory: "1280Mi"
+  limitedMemory: "12Gi"
+  requiredDisk: 50Mi
+  limitedDisk: 200Gi
+
+  supportArch:
+    - amd64
+permission:
+  appData: true
+  appCache: true
+  appCommon: true
+options:
+  apiTimeout: 0
+  LLMGatewaySupported: true
+  shared: true
+  templateOnly: false
+  dependencies:
+    - name: olares
+      version: '>=1.12.7-0'
+      type: system
+envs:
+  - envName: MODEL_SOURCE
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "hf://pyannote/speaker-diarization-community-1,hf://beclab/embedding"
+    description: "HuggingFace sources (comma-separated): index 0 = diarization pipeline, index 1 = speaker embedding; both downloaded by llm-init into the shared cache."
+    regex: "^hf://"
+  - envName: MODEL_NAME
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "pyannote/speaker-diarization-community-1"
+    description: "Model id advertised to clients; must match the engine /v1/models id."
+  - envName: MODEL_MODE
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "audio"
+    options:
+    - title: Audio
+      value: audio
+  - envName: MODEL_SUPPORTS
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "vad,diar,speaker_embed"
+    multiSelect: true
+    splitter: ","
+    options:
+    - title: VAD (voice activity detection)
+      value: vad
+    - title: Diarization (who spoke when)
+      value: diar
+    - title: Speaker embedding (voiceprints)
+      value: speaker_embed
+    description: "Capabilities this app exposes."
+  - envName: REQUIRED_GPU_MEMORY
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "0"
+    description: "GPU memory required for this model. `0` means CPU-only — this app runs entirely on the CPU (diarization, VAD, speaker embeddings)."
+  - envName: CPU_REQUEST
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "500m"
+  - envName: MEMORY_REQUEST
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "1Gi"
+  - envName: CPU_LIMIT
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "8"
+  - envName: MEMORY_LIMIT
+    required: true
+    type: string
+    editable: false
+    applyOnChange: false
+    default: "8Gi"
+  - envName: LOG_LEVEL
+    required: false
+    type: string
+    editable: true
+    applyOnChange: true
+    default: "info"
+    options:
+    - title: Debug
+      value: debug
+    - title: Info
+      value: info
+    - title: Warn
+      value: warn
+    - title: Error
+      value: error
+  - envName: ENGINE_IMAGE
+    required: false
+    type: string
+    editable: true
+    applyOnChange: true
+  - envName: ENGINE_ARGS
+    required: false
+    type: string
+    editable: true
+    applyOnChange: true
+    # Left blank on purpose: the built-in is expressed in the template.
+    description: "Engine-native flags (llm-init ENGINE_ARGS). Left empty, the chart uses
+      \"--segmentation-batch-size 1 --embedding-batch-size 1 --exclusive\": explicit
+      CPU-sized batches and exclusive diarization (non-overlapping turns), which the
+      Router's evidence-based consumers expect. Whatever is here REPLACES that whole
+      list, so carry the flags over when adding one."
+  - envName: OMP_NUM_THREADS
+    required: false
+    type: string
+    editable: true
+    applyOnChange: true
+    default: "8"
+    description: "CPU threads for the pyannote stages. Diarization is the heavy one; raise or lower per node size."
+  - envName: HF_ENDPOINT
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_SYSTEM_HUGGINGFACE_SERVICE
+  - envName: HF_TOKEN
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_SYSTEM_HUGGINGFACE_TOKEN

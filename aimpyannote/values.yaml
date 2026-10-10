@@ -1,0 +1,10 @@
+# Replica count per workload; the keys must match workloadReplicas in OlaresManifest.
+workloads:
+  aimpyannote:
+    replicaCount: 1
+  llminit:
+    replicaCount: 1
+
+# Olares injects the user env map at install time; an empty default keeps
+# `helm template` / lint from failing on a nil map.
+olaresEnv: {}

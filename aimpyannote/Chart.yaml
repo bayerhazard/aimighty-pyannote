@@ -1,0 +1,21 @@
+apiVersion: v2
+appVersion: 26.10.1
+description: Pyannote community-1 diarization + Silero VAD + speaker embeddings via Olares Model Console (llm-init) — CPU-only, Router default-diar/default-vad/default-speaker-embed
+home: https://github.com/bayerhazard/aimighty-pyannote
+keywords:
+- ai
+- audio
+- diarization
+- speaker-embedding
+- voiceprint
+- vad
+- pyannote
+- silero
+maintainers:
+- email: admin@aimighty.local
+  name: Aimighty
+name: aimpyannote
+sources:
+- https://github.com/bayerhazard/aimighty-pyannote
+type: application
+version: 26.10.1
