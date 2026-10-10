@@ -70,6 +70,10 @@ spec:
       labels:
         io.kompose.network/chrome-default: "true"
         io.kompose.service: audio-engine
+      annotations:
+        # Rolls the pod on every chart release: the wrapper lives in ConfigMaps,
+        # and a ConfigMap change alone does not restart a Deployment.
+        aim/chart-rev: "{{ .Chart.Version }}"
     spec:
       restartPolicy: Always
       volumes:
