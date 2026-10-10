@@ -118,6 +118,10 @@ spec:
               value: "{{ $oe.LOG_LEVEL | default "info" }}"
             - name: OMP_NUM_THREADS
               value: "{{ $oe.OMP_NUM_THREADS | default "8" }}"
+            # CPU-only app: hide the node's GPU from torch so diar/embed cannot
+            # silently consume VRAM outside the HAMi accounting.
+            - name: CUDA_VISIBLE_DEVICES
+              value: ""
             - name: WRAPPER_COMMON
               value: /run/llm-init/wrappers/common.sh
 {{- if $engineArgs }}
