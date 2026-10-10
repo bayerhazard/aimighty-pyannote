@@ -341,6 +341,15 @@ def build_app(supports):
                     "num_speakers": len(speakers), "speakers": speakers,
                     "num_segments": len(segs), "segments": segs,
                     "exclusive": exclusive_used}
+            # THIS FORK: evidence-based consumers (e.g. Olares Note's evidence_v2
+            # policy) compare the exclusive turns against the raw, overlapping view
+            # FROM THE SAME RUN. Hand out both when the pipeline holds both.
+            raw = getattr(out, "speaker_diarization", None)
+            if raw is not None:
+                raw_segs = [{"start": round(float(t.start), 3), "end": round(float(t.end), 3),
+                             "speaker": str(spk)}
+                            for t, _, spk in raw.itertracks(yield_label=True)]
+                body["nonexclusive_segments"] = raw_segs
             body.update(_effective(tuning))
             centroids = _centroids(out, speakers)
             if centroids is not None:
