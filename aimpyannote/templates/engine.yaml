@@ -110,7 +110,9 @@ spec:
             - -c
             - >-
               M=/cache/hf/hub/{{ (.Values.modelSeed).repo | default "models--pyannote--speaker-diarization-community-1" }};
-              if [ -d "$M/snapshots" ] && [ -n "$(ls -A "$M/snapshots" 2>/dev/null)" ]; then echo 'seed: model cache already present'; exit 0; fi;
+              S=$(ls -d "$M"/snapshots/*/ 2>/dev/null | head -n 1);
+              if [ -n "$S" ] && [ -f "$S/config.yaml" ] && [ -d "$S/segmentation" ] && [ -d "$S/embedding" ] && [ -d "$S/plda" ]; then echo 'seed: model cache complete'; exit 0; fi;
+              if [ -d "$M" ]; then echo 'seed: cache present but incomplete, reseeding'; rm -rf "$M"; fi;
               wget -q -O /tmp/seed.tgz {{ (.Values.modelSeed).url | default "https://github.com/bayerhazard/aimighty-pyannote/releases/download/model-v1/pyannote-community-1-hfcache.tar.gz" }} &&
               tar xzf /tmp/seed.tgz -C /cache/hf/hub && chown -R 1000:1000 "$M" && echo 'seed: model cache installed' ||
               echo 'seed: fetch failed, falling back to Hugging Face'
