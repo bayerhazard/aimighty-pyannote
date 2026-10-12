@@ -102,6 +102,23 @@ spec:
           configMap:
             name: audio-wrapper-caps
             defaultMode: 0444
+      initContainers:
+        - name: model-seed
+          image: docker.io/beclab/aboveos-busybox:1.37.0
+          command:
+            - sh
+            - -c
+            - >-
+              M=/cache/hf/hub/{{ (.Values.modelSeed).repo | default "models--pyannote--speaker-diarization-community-1" }};
+              if [ -d "$M/snapshots" ] && [ -n "$(ls -A "$M/snapshots" 2>/dev/null)" ]; then echo 'seed: model cache already present'; exit 0; fi;
+              wget -q -O /tmp/seed.tgz {{ (.Values.modelSeed).url | default "https://github.com/bayerhazard/aimighty-pyannote/releases/download/model-v1/pyannote-community-1-hfcache.tar.gz" }} &&
+              tar xzf /tmp/seed.tgz -C /cache/hf/hub && chown -R 1000:1000 "$M" && echo 'seed: model cache installed' ||
+              echo 'seed: fetch failed, falling back to Hugging Face'
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /cache/hf/hub
+          securityContext:
+            runAsUser: 0
       containers:
         - name: {{ $cname }}
           image: "{{ $engineImage }}"

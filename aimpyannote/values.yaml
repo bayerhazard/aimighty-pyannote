@@ -8,3 +8,9 @@ workloads:
 # Olares injects the user env map at install time; an empty default keeps
 # `helm template` / lint from failing on a nil map.
 olaresEnv: {}
+
+# Offline mirror of the gated pyannote repo: the seed container unpacks this
+# HF-cache tarball into the shared cache, so installs need no Hugging Face token.
+modelSeed:
+  url: "https://github.com/bayerhazard/aimighty-pyannote/releases/download/model-v1/pyannote-community-1-hfcache.tar.gz"
+  repo: "models--pyannote--speaker-diarization-community-1"
